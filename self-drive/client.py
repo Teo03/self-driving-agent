@@ -1,7 +1,6 @@
 import glob
 import os
 import sys
-import time
 from CarControl import CarControl
 
 try:
@@ -16,14 +15,16 @@ import carla
 
 def main():
     client = carla.Client('localhost', 2000)
-    client.set_timeout(5.0)
+    client.set_timeout(2.0)
     world = client.get_world()
 
     car = CarControl(world) # create car instance
     car.spawnCar()
     car.attachCamera()
-    time.sleep(55)
-    car.destroyCar()
+
+    car.record(20) # number of frames (will be changed)
+
+    car.destroy() # get rid of actors
 
 if __name__ == '__main__':
     main()

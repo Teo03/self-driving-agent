@@ -2,8 +2,9 @@ import glob
 import os
 import sys
 import random
-import time
 import numpy as np
+import pandas as pd
+from time import sleep
 import cv2
 
 try:
@@ -25,6 +26,7 @@ class CarControl:
         self.world = world
         self.car = None
         self.camera = None
+        self.df = pd.DataFrame({'imageName': [], 'steeringAngle': []})
 
     def spawnCar(self):
         #spawns and returns car actor
@@ -40,37 +42,54 @@ class CarControl:
         self.car = self.world.spawn_actor(car_bp, transform)
         print('created %s' % self.car.type_id)
         self.car.set_autopilot(True)
-    
+
     def attachCamera(self):
         # spawns and attaches camera sensor
 
-        cam_bp = self.world.get_blueprint_library().find('sensor.camera.rgb') # it's actually rgba(4 channel)
+        cam_bp = self.world.get_blueprint_library().find('sensor.camera.semantic_segmentation') # it's actually rgba(4 channel)
 
         cam_bp.set_attribute('image_size_x', f'{IMG_WIDTH}')
         cam_bp.set_attribute('image_size_y', f'{IMG_HEIGHT}')
         cam_bp.set_attribute('fov', '110') # field of view
 
         # time in seconds between sensor captures
-        cam_bp.set_attribute('sensor_tick', '1.5')
+        cam_bp.set_attribute('sensor_tick', '1.0')
 
         # attach the camera
         spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
 
         # spawn the camera
         self.camera = self.world.spawn_actor(cam_bp, spawn_point, attach_to=self.car)
-        self.camera.listen(lambda data: self.__cameraFeed(data))
         
-    def __cameraFeed(self, image):
-        i = np.array(image.raw_data)
-        i2 = i.reshape((IMG_HEIGHT, IMG_WIDTH, 4)) # 4 channel - rgba
-        i3 = i2[:, :, :3] # 3 channel rgb
-        cv2.imshow("", i3)
-        cv2.waitKey(1)
-        return i3/255.0
+    def record(self, frames):
+        # record car actions
+        self.camera.listen(lambda image: self.__save(image, self.car.get_control()))
+        # wait for the camera to finish capturing
+        sleep(frames)
+        self.df.to_csv("data.csv", index=False)
 
-    def destroyCar(self):
-        # use this instead of actor_list
-        
+        print('capturing has completed')
+
+    def __save(self, image, control):
+        # save the data and the png's
+
+        cc = carla.ColorConverter.CityScapesPalette
+        path = 'image_data/%s.png' % image.frame
+        image.save_to_disk(path, cc)
+
+        steer = control.steer
+        self.__createRow(path, steer)
+
+    def __createRow(self, image_path, steer):
+        # creates a row in the csv file
+
+        image_name = image_path.split("/",1)[1] # get the name without the folder path
+        row = [image_name, steer]
+        self.df.loc[len(self.df)] = row
+
+        print('saved row: ' + image_name + '/' + str(steer))
+
+    def destroy(self):
         self.car.destroy()
         self.camera.destroy()
-        print('destroyed vehicle and sensors')
+        print('destroying actors')

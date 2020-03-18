@@ -2,10 +2,8 @@ import glob
 import os
 import sys
 import random
-import numpy as np
 import pandas as pd
 from time import sleep
-import cv2
 
 try:
     sys.path.append(glob.glob('C:/Users/Teo/Desktop/self-driving-agent/carla/dist/carla-*%d.%d-%s.egg' % (
@@ -20,6 +18,7 @@ import carla
 IMG_HEIGHT = 480
 IMG_WIDTH = 640
 
+
 class CarControl:
 
     def __init__(self, world):
@@ -29,11 +28,11 @@ class CarControl:
         self.df = pd.DataFrame({'imageName': [], 'steeringAngle': []})
 
     def spawnCar(self):
-        #spawns and returns car actor
+        # spawns and returns car actor
         
         blueprint_library = self.world.get_blueprint_library()
 
-        car_bp = blueprint_library.filter('model3')[0] # spawn tesla model 3 :)
+        car_bp = blueprint_library.filter('model3')[0]  # spawn tesla model 3 :)
 
         if car_bp.has_attribute('color'):
             car_bp.set_attribute('color', '204, 0, 0') # tesla red color
@@ -46,7 +45,7 @@ class CarControl:
     def attachCamera(self):
         # spawns and attaches camera sensor
 
-        cam_bp = self.world.get_blueprint_library().find('sensor.camera.semantic_segmentation') # it's actually rgba(4 channel)
+        cam_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')  # it's actually RGBA (4 channel)
 
         cam_bp.set_attribute('image_size_x', f'{IMG_WIDTH}')
         cam_bp.set_attribute('image_size_y', f'{IMG_HEIGHT}')
@@ -66,16 +65,14 @@ class CarControl:
         self.camera.listen(lambda image: self.__save(image, self.car.get_control()))
         # wait for the camera to finish capturing
         sleep(frames)
-        self.df.to_csv("data.csv", index=False)
 
         print('capturing has completed')
 
     def __save(self, image, control):
         # save the data and the png's
 
-        cc = carla.ColorConverter.CityScapesPalette
         path = 'image_data/%s.png' % image.frame
-        image.save_to_disk(path, cc)
+        image.save_to_disk(path)
 
         steer = control.steer
         self.__createRow(path, steer)
@@ -83,11 +80,12 @@ class CarControl:
     def __createRow(self, image_path, steer):
         # creates a row in the csv file
 
-        image_name = image_path.split("/",1)[1] # get the name without the folder path
+        image_name = image_path.split("/", 1)[1]  # get the name without the folder path
         row = [image_name, steer]
         self.df.loc[len(self.df)] = row
 
         print('saved row: ' + image_name + '/' + str(steer))
+        self.df.to_csv("data.csv", index=False)
 
     def destroy(self):
         self.car.destroy()

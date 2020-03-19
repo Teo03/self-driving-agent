@@ -22,22 +22,28 @@ def connect():
     return world
 
 
-def train(dataPath):
-    model = Model(dataPath, 128, (7984 // 128), (1996 // 128), 15)
-    model.train('C:\\Users\\Teo\\Desktop\\self-driving-agent\\self-drive\\models\\checkpoints', 'model_checkpoint.h5', 'C:\\Users\\Teo\\Desktop\\self-driving-agent\\self-drive\\models', 'model_final.h5')
+def train(dataPath, modelsPath, numTrain, numVal):
+    model = Model(dataPath, 128, (numTrain // 128), (numVal // 128), 20)
+    model.train(modelsPath)
 
 
 def collectData(frames):
     world = connect()
-    car = CarControl(world)  # create car instance
+    car = CarControl(world)
+
     car.spawnCar()
     car.attachCamera()
     car.record(frames)
-    car.destroy()  # get rid of actors
+
+    # get rid of actors
+    car.destroy()
 
 
 def main():
-    train('C:\\Users\\\Teo\\\Desktop\\\data_10k\\')
+    if sys.argv[1] == 'train':
+        train(str(sys.argv[2]), str(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]))
+    elif sys.argv[1] == 'collect':
+        collectData(int(sys.argv[2]))
 
 
 if __name__ == '__main__':

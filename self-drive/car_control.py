@@ -71,7 +71,7 @@ class CarControl:
     def __save(self, image, control):
         # save the data and the png's
 
-        path = 'image_data/%s.png' % image.frame
+        path = '../generated_data/image_data/%s.png' % image.frame
         image.save_to_disk(path)
 
         steer = control.steer
@@ -80,12 +80,12 @@ class CarControl:
     def __createRow(self, image_path, steer):
         # creates a row in the csv file
 
-        image_name = image_path.split("/", 1)[1]  # get the name without the folder path
+        image_name = image_path.rsplit('/', 1)[-1]  # get the name without the folder path
         row = [image_name, steer]
         self.df.loc[len(self.df)] = row
 
         print('saved row: ' + image_name + '/' + str(steer))
-        self.df.to_csv("data.csv", index=False)
+        self.df.to_csv("../generated_data/data.csv", index=False)
 
     def destroy(self):
         self.car.destroy()

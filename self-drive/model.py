@@ -57,7 +57,7 @@ class Model:
 
         return model
 
-    def train(self, checkpoint_dir, checkpoint_name, model_dir, model_name):
+    def train(self, modelsPath):
         # start the training of the model
 
         # initialize variables
@@ -66,7 +66,7 @@ class Model:
         preprocess = Preprocess(self.imageFilesPath)
 
         # create a checkpoint to return the current bes version
-        checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(checkpoint_dir, checkpoint_name),
+        checkpoint_callback = keras.callbacks.ModelCheckpoint(filepath=os.path.join(modelsPath, 'model_checkpoint.h5'),
                                                               verbose=1,
                                                               save_best_only=True)
 
@@ -86,5 +86,5 @@ class Model:
                   callbacks=[checkpoint_callback])
 
         # save the model after the training finishes
-        model.save(os.path.join(model_dir, model_name))
+        model.save(os.path.join(modelsPath, 'model_final.h5'))
         print('model is saved!')

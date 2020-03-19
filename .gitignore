@@ -1,8 +1,7 @@
 CarlaRoot
 .vscode
 carla
-image_data
-data.csv
+generated_data
 venv
 .idea
 

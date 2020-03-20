@@ -2,19 +2,18 @@ import os
 import cv2
 import random
 import numpy as np
-import matplotlib.image as mpimg
 from imgaug import augmenters as img_aug
 
 
 class Preprocess:
     def __init__(self, image_path):
         self.imagePath = image_path
-
-    def __readImg(self, image_name):
-        # read the image and return a rgb version (instead of rgba)
+        
+    # TODO: change back to private
+    def readImg(self, image_name):
+        # get image as array of values
         path = self.imagePath + image_name
-        image = mpimg.imread(path)
-        image = image[:, :, :3]  # RGBA to RGB
+        image = cv2.imread(path)
         return image
 
     @staticmethod
@@ -53,13 +52,13 @@ class Preprocess:
         return image, steering_angle
 
     @staticmethod
-    def __preprocess(image):
+    def preprocess(image):
         # based on nvidia paper
         height, _, _ = image.shape
         image = image[int(height / 2):, :, :]  # removes top half
         image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
         image = cv2.resize(image, (200, 66))
-        return image
+        return image / 255 # normalize
 
     def image_data_generator(self, image_names, steering_angles, batch_size, is_training):
         while True:
@@ -70,13 +69,13 @@ class Preprocess:
                 # get a random image from array of image indexes
                 random_index = random.choice(image_names.index.values)
 
-                image = self.__readImg(image_names[random_index])
+                image = self.readImg(image_names[random_index])
                 steering_angle = steering_angles[random_index]
 
                 if is_training:
                     image, steering_angle = self.__augment(image, steering_angle)
 
-                image = self.__preprocess(image)
+                image = self.preprocess(image)
                 batch_images.append(image)
                 batch_steering_angles.append(steering_angle)
 

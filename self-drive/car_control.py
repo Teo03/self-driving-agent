@@ -1,9 +1,14 @@
 import glob
 import os
 import sys
-import random
+from random import choice
+
+import numpy as np
 import pandas as pd
 from time import sleep
+from tensorflow.keras.models import load_model
+
+from image_preprocess import Preprocess
 
 try:
     sys.path.append(glob.glob('C:/Users/Teo/Desktop/self-driving-agent/carla/dist/carla-*%d.%d-%s.egg' % (
@@ -26,8 +31,9 @@ class CarControl:
         self.car = None
         self.camera = None
         self.df = pd.DataFrame({'imageName': [], 'steeringAngle': []})
+        self.model = load_model('C:\\Users\\\Teo\\\Desktop\\\self-driving-agent\\\self-drive\\models\\model_final.h5')
 
-    def spawnCar(self):
+    def spawnCar(self, autopilotEnabled):
         # spawns and returns car actor
         
         blueprint_library = self.world.get_blueprint_library()
@@ -36,11 +42,11 @@ class CarControl:
 
         if car_bp.has_attribute('color'):
             car_bp.set_attribute('color', '204, 0, 0') # tesla red color
-        transform = random.choice(self.world.get_map().get_spawn_points())
+        transform = choice(self.world.get_map().get_spawn_points())
 
         self.car = self.world.spawn_actor(car_bp, transform)
         print('created %s' % self.car.type_id)
-        self.car.set_autopilot(True)
+        self.car.set_autopilot(autopilotEnabled)
 
     def attachCamera(self):
         # spawns and attaches camera sensor
@@ -59,7 +65,27 @@ class CarControl:
 
         # spawn the camera
         self.camera = self.world.spawn_actor(cam_bp, spawn_point, attach_to=self.car)
-        
+
+    def engage(self):
+        self.camera.listen(lambda image: self.__getLiveFeed(image.raw_data))
+
+    def __getLiveFeed(self, raw_img):
+        pr = Preprocess('')
+        img = np.array(raw_img).reshape((IMG_HEIGHT, IMG_WIDTH, 4))
+        image = img[:, :, :3]
+        final_img = pr.preprocess(image)
+        self.__predictAngle(final_img)
+
+    def __predictAngle(self, img):
+        print('predicting angle..')
+        predictedAngle = self.model.predict(img.reshape(1, 66, 200, 3))
+        print('predicted')
+        self.__steerCar(predictedAngle)
+
+    def __steerCar(self, steer):
+        print('steering car..')
+        self.car.apply_control(carla.VehicleControl(throttle=0.2, steer=steer))
+
     def record(self, frames):
         # record car actions
         self.camera.listen(lambda image: self.__save(image, self.car.get_control()))
@@ -88,6 +114,8 @@ class CarControl:
         self.df.to_csv("../generated_data/data.csv", index=False)
 
     def destroy(self):
-        self.car.destroy()
-        self.camera.destroy()
+        if self.car is not None:
+            self.car.destroy()
+        if self.camera is not None:
+            self.camera.destroy()
         print('destroying actors')

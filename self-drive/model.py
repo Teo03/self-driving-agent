@@ -2,10 +2,13 @@ import os
 
 import pandas as pd
 
+import tensorflow as tf
 import keras
+
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Lambda, Conv2D, MaxPool2D, Dropout, Flatten, Dense
+from tensorflow.keras.layers import Conv2D, Flatten, Dense
 from tensorflow.keras.optimizers import Adam
+from tensorflow.python.keras.callbacks import TensorBoard
 
 from sklearn.model_selection import train_test_split
 
@@ -39,21 +42,19 @@ class Model:
         # based on the nvidia "End to End Learning for Self-Driving Cars" paper
         model = Sequential(name='model')
 
-        model.add(Lambda(lambda x: x / 127.5 - 1.0, input_shape=(66, 200, 3)))
-        model.add(Conv2D(24, (5, 5), strides=(2, 2), activation='elu'))
+        model.add(Conv2D(24, (5, 5), strides=(2, 2), activation='elu', input_shape=(66, 200, 3)))
         model.add(Conv2D(36, (5, 5), strides=(2, 2), activation='elu'))
         model.add(Conv2D(48, (5, 5), strides=(2, 2), activation='elu'))
         model.add(Conv2D(64, (3, 3), activation='elu'))
-        model.add(Dropout(0.2))  # not in nvidia model
         model.add(Conv2D(64, (3, 3), activation='elu'))
         model.add(Flatten())
-        model.add(Dropout(0.1))  # not in nvidia model
         model.add(Dense(100, activation='elu'))
         model.add(Dense(50, activation='elu'))
         model.add(Dense(10, activation='elu'))
         model.add(Dense(1))
 
-        model.compile(loss='mse', optimizer=Adam(lr=1e-3))
+        optimizer = Adam(lr=0.001)
+        model.compile(loss=tf.keras.losses.mean_absolute_error, optimizer=optimizer, metrics=['accuracy'])
 
         return model
 
@@ -63,6 +64,7 @@ class Model:
         # initialize variables
         X_train, X_valid, y_train, y_valid = self.splitData()
         model = self.__initModel()
+        tensorboard = TensorBoard(log_dir='logs')
         preprocess = Preprocess(self.imageFilesPath)
 
         # create a checkpoint to return the current bes version
@@ -83,7 +85,7 @@ class Model:
                   validation_steps=self.valSteps,
                   verbose=1,
                   shuffle=1,
-                  callbacks=[checkpoint_callback])
+                  callbacks=[checkpoint_callback, tensorboard])
 
         # save the model after the training finishes
         model.save(os.path.join(modelsPath, 'model_final.h5'))

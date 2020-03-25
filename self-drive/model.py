@@ -6,7 +6,7 @@ import tensorflow as tf
 import keras
 
 from tensorflow.keras.models import Sequential
-from tensorflow.keras.layers import Conv2D, Flatten, Dense
+from tensorflow.keras.layers import Conv2D, Flatten, Dropout, Dense
 from tensorflow.keras.optimizers import Adam
 from tensorflow.python.keras.callbacks import TensorBoard
 
@@ -43,18 +43,19 @@ class Model:
         model = Sequential(name='model')
 
         model.add(Conv2D(24, (5, 5), strides=(2, 2), activation='elu', input_shape=(66, 200, 3)))
-        model.add(Conv2D(36, (5, 5), strides=(2, 2), activation='elu'))
-        model.add(Conv2D(48, (5, 5), strides=(2, 2), activation='elu'))
-        model.add(Conv2D(64, (3, 3), activation='elu'))
-        model.add(Conv2D(64, (3, 3), activation='elu'))
+        model.add(Conv2D(36, (5, 5), strides=(2, 2), activation='elu')) 
+        model.add(Conv2D(48, (5, 5), strides=(2, 2), activation='elu')) 
+        model.add(Conv2D(64, (3, 3), activation='elu')) 
+        model.add(Dropout(0.2))
+        model.add(Conv2D(64, (3, 3), activation='elu')) 
         model.add(Flatten())
+        model.add(Dropout(0.2))
         model.add(Dense(100, activation='elu'))
         model.add(Dense(50, activation='elu'))
         model.add(Dense(10, activation='elu'))
-        model.add(Dense(1))
+        model.add(Dense(1)) 
 
-        optimizer = Adam(lr=0.001)
-        model.compile(loss=tf.keras.losses.mean_absolute_error, optimizer=optimizer, metrics=['accuracy'])
+        model.compile(loss='mse', optimizer=Adam(lr=1e-3))
 
         return model
 

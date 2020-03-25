@@ -2,6 +2,7 @@ import glob
 import os
 import sys
 import time
+
 from car_control import CarControl
 from model import Model
 
@@ -23,44 +24,42 @@ def connect():
     return world
 
 
-def collectData(frames):
+def collectDataAuto(seconds):
     world = connect()
     car = CarControl(world)
 
-    # set Autopilot to true for collecting data
     car.spawnCar(True)
-    car.attachCamera()
-    car.record(frames)
+    car.attachCamera(None)
+    car.record()
 
-    # get rid of actors
+    time.sleep(seconds)
     car.destroy()
 
 
-def train(dataPath, modelsPath, numTrain, numVal, bSize):
-    model = Model(dataPath, bSize, (numTrain // bSize), (numVal // bSize), 10)
+def train(dataPath, modelsPath):
+    model = Model(dataPath, 100, 300, 200, 15)
     model.train(modelsPath)
 
 
-def drive():
+def drive(seconds):
     world = connect()
     car = CarControl(world)
 
-    # set Autopilot to false because we want to control the car
     car.spawnCar(False)
-    car.attachCamera()
+    car.attachCamera(None)
     car.engage()
 
-    time.sleep(10)
+    time.sleep(seconds)
     car.destroy()
 
 
 def main():
     if sys.argv[1] == 'train':
-        train(str(sys.argv[2]), str(sys.argv[3]), int(sys.argv[4]), int(sys.argv[5]), int(sys.argv[6]))
+        train(str(sys.argv[2]), str(sys.argv[3]))
     elif sys.argv[1] == 'collect':
-        collectData(int(sys.argv[2]))
+        collectDataAuto(int(sys.argv[2]))
     elif sys.argv[1] == 'drive':
-        drive()
+        drive(int(sys.argv[2]))
 
 
 if __name__ == '__main__':

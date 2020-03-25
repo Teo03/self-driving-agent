@@ -1,13 +1,11 @@
 import glob
 import os
 import sys
-from random import choice
 
 import numpy as np
 import pandas as pd
-from time import sleep
-from tensorflow.keras.models import load_model
 
+from tensorflow.keras.models import load_model
 from image_preprocess import Preprocess
 
 try:
@@ -31,9 +29,9 @@ class CarControl:
         self.car = None
         self.camera = None
         self.df = pd.DataFrame({'imageName': [], 'steeringAngle': []})
-        self.model = load_model('C:\\Users\\\Teo\\\Desktop\\\self-driving-agent\\\self-drive\\models\\model_final.h5')
+        self.model = load_model('./models/model_final.h5')
 
-    def spawnCar(self, autopilotEnabled):
+    def spawnCar(self, auto):
         # spawns and returns car actor
         
         blueprint_library = self.world.get_blueprint_library()
@@ -42,26 +40,30 @@ class CarControl:
 
         if car_bp.has_attribute('color'):
             car_bp.set_attribute('color', '204, 0, 0') # tesla red color
-        transform = choice(self.world.get_map().get_spawn_points())
+        transform = self.world.get_map().get_spawn_points()[1]
 
         self.car = self.world.spawn_actor(car_bp, transform)
         print('created %s' % self.car.type_id)
-        self.car.set_autopilot(autopilotEnabled)
+        self.car.set_autopilot(auto)
 
-    def attachCamera(self):
+    def attachCamera(self, manualCtrCar):
         # spawns and attaches camera sensor
 
         cam_bp = self.world.get_blueprint_library().find('sensor.camera.rgb')  # it's actually RGBA (4 channel)
 
         cam_bp.set_attribute('image_size_x', f'{IMG_WIDTH}')
         cam_bp.set_attribute('image_size_y', f'{IMG_HEIGHT}')
-        cam_bp.set_attribute('fov', '110') # field of view
+        cam_bp.set_attribute('fov', '90') # field of view
 
         # time in seconds between sensor captures
-        cam_bp.set_attribute('sensor_tick', '1.0')
+        cam_bp.set_attribute('sensor_tick', '0.2')
 
         # attach the camera
         spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
+
+        # added for manual driving
+        if self.car is None:
+            self.car = manualCtrCar
 
         # spawn the camera
         self.camera = self.world.spawn_actor(cam_bp, spawn_point, attach_to=self.car)
@@ -79,23 +81,19 @@ class CarControl:
     def __predictAngle(self, img):
         print('predicting angle..')
         predictedAngle = self.model.predict(img.reshape(1, 66, 200, 3))
-        print('predicted')
-        self.__steerCar(predictedAngle)
+        self.car.apply_control(carla.VehicleControl(throttle=0.6, steer=float(predictedAngle[0][0])))
 
-    def __steerCar(self, steer):
-        print('steering car..')
-        self.car.apply_control(carla.VehicleControl(throttle=0.2, steer=steer))
-
-    def record(self, frames):
+    def record(self):
         # record car actions
         self.camera.listen(lambda image: self.__save(image, self.car.get_control()))
-        # wait for the camera to finish capturing
-        sleep(frames)
-
-        print('capturing has completed')
 
     def __save(self, image, control):
         # save the data and the png's
+
+        if self.car.is_at_traffic_light():
+            traffic_light = self.car.get_traffic_light()
+            if traffic_light.get_state() != carla.TrafficLightState.Green:
+                traffic_light.set_state(carla.TrafficLightState.Green)
 
         path = '../generated_data/image_data/%s.png' % image.frame
         image.save_to_disk(path)
@@ -118,4 +116,5 @@ class CarControl:
             self.car.destroy()
         if self.camera is not None:
             self.camera.destroy()
+        exit(0)
         print('destroying actors')

@@ -9,11 +9,11 @@ class Preprocess:
     def __init__(self, image_path):
         self.imagePath = image_path
         
-    # TODO: change back to private
     def readImg(self, image_name):
         # get image as array of values
         path = self.imagePath + image_name
         image = cv2.imread(path)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
     @staticmethod
@@ -40,6 +40,15 @@ class Preprocess:
         image = cv2.blur(image, (kernel_size, kernel_size))
         return image
 
+    @staticmethod
+    def __randomFlip(image, steering_angle):
+        is_flip = random.randint(0, 1)
+        if is_flip == 1:
+            image = cv2.flip(image, 1)
+            steering_angle = -steering_angle
+    
+        return image, steering_angle
+
     def __augment(self, image, steering_angle):
         if np.random.rand() < 0.5:
             image = self.__pan(image)
@@ -49,6 +58,8 @@ class Preprocess:
             image = self.__blur(image)
         if np.random.rand() < 0.5:
             image = self.__adjustBrightness(image)
+
+        image, steering_angle = self.__randomFlip(image, steering_angle)
         return image, steering_angle
 
     @staticmethod
@@ -57,6 +68,7 @@ class Preprocess:
         height, _, _ = image.shape
         image = image[int(height / 2):, :, :]  # removes top half
         image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
+        image = cv2.GaussianBlur(image, (3,3), 0)
         image = cv2.resize(image, (200, 66))
         return image / 255 # normalize
 

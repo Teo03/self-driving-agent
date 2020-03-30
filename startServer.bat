@@ -1,2 +1,2 @@
-cd CarlaRoot
-CarlaUE4.exe -carla-rpc-port=2000
+cd WindowsNoEditor
+CarlaUE4.exe -carla-rpc-port=2000 -quality-level=Low

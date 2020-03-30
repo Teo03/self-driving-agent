@@ -40,7 +40,7 @@ class CarControl:
 
         if car_bp.has_attribute('color'):
             car_bp.set_attribute('color', '204, 0, 0') # tesla red color
-        transform = self.world.get_map().get_spawn_points()[1]
+        transform = self.world.get_map().get_spawn_points()[4]
 
         self.car = self.world.spawn_actor(car_bp, transform)
         print('created %s' % self.car.type_id)
@@ -56,7 +56,7 @@ class CarControl:
         cam_bp.set_attribute('fov', '90') # field of view
 
         # time in seconds between sensor captures
-        cam_bp.set_attribute('sensor_tick', '0.2')
+        cam_bp.set_attribute('sensor_tick', '0.1')
 
         # attach the camera
         spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
@@ -79,9 +79,9 @@ class CarControl:
         self.__predictAngle(final_img)
 
     def __predictAngle(self, img):
-        print('predicting angle..')
         predictedAngle = self.model.predict(img.reshape(1, 66, 200, 3))
-        self.car.apply_control(carla.VehicleControl(throttle=0.6, steer=float(predictedAngle[0][0])))
+        print(str(predictedAngle[0][0]))
+        self.car.apply_control(carla.VehicleControl(throttle=0.4, steer=float(predictedAngle[0][0])))
 
     def record(self):
         # record car actions

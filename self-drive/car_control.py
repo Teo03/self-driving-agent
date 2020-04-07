@@ -17,6 +17,7 @@ except IndexError:
     pass
 
 import carla
+import cv2
 
 IMG_HEIGHT = 480
 IMG_WIDTH = 640
@@ -29,7 +30,8 @@ class CarControl:
         self.car = None
         self.camera = None
         self.df = pd.DataFrame({'imageName': [], 'steeringAngle': []})
-        self.model = load_model('./models/model_final.h5')
+        self.model = load_model('model_best.h5')
+        self.numCaptured = 0
 
     def spawnCar(self, auto):
         # spawns and returns car actor
@@ -40,7 +42,7 @@ class CarControl:
 
         if car_bp.has_attribute('color'):
             car_bp.set_attribute('color', '204, 0, 0') # tesla red color
-        transform = self.world.get_map().get_spawn_points()[4]
+        transform = self.world.get_map().get_spawn_points()[50]
 
         self.car = self.world.spawn_actor(car_bp, transform)
         print('created %s' % self.car.type_id)
@@ -56,10 +58,9 @@ class CarControl:
         cam_bp.set_attribute('fov', '90') # field of view
 
         # time in seconds between sensor captures
-        cam_bp.set_attribute('sensor_tick', '0.1')
-
+        cam_bp.set_attribute('sensor_tick', '0.5') # change for capturing
         # attach the camera
-        spawn_point = carla.Transform(carla.Location(x=2.5, z=0.7))
+        spawn_point = carla.Transform(carla.Location(x=2.5, y=0, z=1.7))
 
         # added for manual driving
         if self.car is None:
@@ -75,13 +76,14 @@ class CarControl:
         pr = Preprocess('')
         img = np.array(raw_img).reshape((IMG_HEIGHT, IMG_WIDTH, 4))
         image = img[:, :, :3]
+        image = cv2.cvtColor(image, cv2.COLOR_RGB2BGR)
         final_img = pr.preprocess(image)
         self.__predictAngle(final_img)
 
     def __predictAngle(self, img):
         predictedAngle = self.model.predict(img.reshape(1, 66, 200, 3))
         print(str(predictedAngle[0][0]))
-        self.car.apply_control(carla.VehicleControl(throttle=0.4, steer=float(predictedAngle[0][0])))
+        self.car.apply_control(carla.VehicleControl(throttle=0.3, steer=float(predictedAngle[0][0])))
 
     def record(self):
         # record car actions
@@ -108,8 +110,9 @@ class CarControl:
         row = [image_name, steer]
         self.df.loc[len(self.df)] = row
 
-        print('saved row: ' + image_name + '/' + str(steer))
+        print('saved row: ' + image_name + '/' + str(steer) + ', length: ' + str(self.numCaptured))
         self.df.to_csv("../generated_data/data.csv", index=False)
+        self.numCaptured += 1
 
     def destroy(self):
         if self.car is not None:

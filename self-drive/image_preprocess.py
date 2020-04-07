@@ -10,10 +10,9 @@ class Preprocess:
         self.imagePath = image_path
         
     def readImg(self, image_name):
-        # get image as array of values
+        # get image as an array of values
         path = self.imagePath + image_name
         image = cv2.imread(path)
-        image = cv2.cvtColor(image, cv2.COLOR_BGR2RGB)
         return image
 
     @staticmethod
@@ -67,10 +66,9 @@ class Preprocess:
         # based on nvidia paper
         height, _, _ = image.shape
         image = image[int(height / 2):, :, :]  # removes top half
-        image = cv2.cvtColor(image, cv2.COLOR_RGB2YUV)
-        image = cv2.GaussianBlur(image, (3,3), 0)
+        image = cv2.cvtColor(image, cv2.COLOR_BGR2YUV)
         image = cv2.resize(image, (200, 66))
-        return image / 255 # normalize
+        return image # normalize later in model
 
     def image_data_generator(self, image_names, steering_angles, batch_size, is_training):
         while True:

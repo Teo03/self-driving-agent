@@ -3,6 +3,8 @@ import os
 import sys
 import time
 
+import wandb
+
 from car_control import CarControl
 from model import Model
 
@@ -36,9 +38,13 @@ def collectDataAuto(seconds):
     car.destroy()
 
 
-def train(dataPath, modelsPath):
-    model = Model(dataPath, 100, 300, 200, 15)
-    model.train(modelsPath)
+def train(dataPath, modelsPath, savedModelPath):
+    wandb.init(project='self-driving-agent')
+    model = Model(dataPath, 100, 300, 200, 50)
+    if savedModelPath == 'new':
+        model.train(modelsPath, None)
+    else:
+        model.train(modelsPath, savedModelPath)
 
 
 def drive(seconds):
@@ -55,7 +61,7 @@ def drive(seconds):
 
 def main():
     if sys.argv[1] == 'train':
-        train(str(sys.argv[2]), str(sys.argv[3]))
+        train(str(sys.argv[2]), str(sys.argv[3]), str(sys.argv[4]))
     elif sys.argv[1] == 'collect':
         collectDataAuto(int(sys.argv[2]))
     elif sys.argv[1] == 'drive':
